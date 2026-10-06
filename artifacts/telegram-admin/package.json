@@ -7,7 +7,7 @@
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "pnpm --filter @workspace/api-server run build && vite build --config vite.config.ts",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
-    "start": "node --env-file-if-exists=../../.env serve.mjs",
+    "start": "pnpm --filter @workspace/db run push && node --env-file-if-exists=../../.env serve.mjs"
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
