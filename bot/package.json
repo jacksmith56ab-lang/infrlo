@@ -1,0 +1,11 @@
+{
+  "name": "@workspace/telegram-bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node --check index.mjs && node --check adapters/telegram.mjs",
+    "start": "node --env-file-if-exists=../.env index.mjs",
+    "check": "pnpm run build"
+  }
+}

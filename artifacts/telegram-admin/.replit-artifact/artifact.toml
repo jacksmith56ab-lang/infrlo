@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Telegram Bot Admin"
+description = "A responsive control panel for Telegram bot operators to manage users, product catalog, orders, balances, and bot settings through a standalone REST API."
+version = "1.0.0"
+id = "artifacts/telegram-admin"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25312
+
+[services.development]
+run = "pnpm --filter @workspace/telegram-admin run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/telegram-admin", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/telegram-admin/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25312"
+BASE_PATH = "/"

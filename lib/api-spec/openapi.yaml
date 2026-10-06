@@ -1,0 +1,643 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: REST API for a Telegram bot control panel
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: dashboard
+    description: Dashboard overview and activity
+  - name: users
+    description: Telegram users and balances
+  - name: products
+    description: Product catalog
+  - name: orders
+    description: Order management
+  - name: bot
+    description: Bot configuration and Telegram adapter endpoints
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Get dashboard totals and order status counts
+      responses:
+        "200":
+          description: Dashboard overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+  /activity:
+    get:
+      operationId: getActivity
+      tags: [dashboard]
+      summary: Get recent user, product, and order activity
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+  /users:
+    get:
+      operationId: getUsers
+      tags: [users]
+      summary: List and search users
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            $ref: "#/components/schemas/UserStatus"
+      responses:
+        "200":
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Add a user to the bot audience
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInput"
+      responses:
+        "201":
+          description: Created user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+  /users/{id}:
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Update a user's profile or status
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Delete a user
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "204":
+          description: User deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /users/{id}/balance:
+    post:
+      operationId: changeUserBalance
+      tags: [users]
+      summary: Add or subtract from a user's balance
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BalanceChange"
+      responses:
+        "200":
+          description: Updated user balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /users/{id}/transactions:
+    get:
+      operationId: getUserTransactions
+      tags: [users]
+      summary: List balance changes for a user
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Balance history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BalanceTransaction"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /products:
+    get:
+      operationId: getProducts
+      tags: [products]
+      summary: List and search products
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            $ref: "#/components/schemas/ProductStatus"
+      responses:
+        "200":
+          description: Products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Create a product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductInput"
+      responses:
+        "201":
+          description: Created product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+  /products/{id}:
+    patch:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update product details including its photo URL
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductUpdate"
+      responses:
+        "200":
+          description: Updated product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Delete a product not referenced by an order
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "204":
+          description: Product deleted
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /orders:
+    get:
+      operationId: getOrders
+      tags: [orders]
+      summary: List orders, optionally filtered by status
+      parameters:
+        - in: query
+          name: status
+          schema:
+            $ref: "#/components/schemas/OrderStatus"
+      responses:
+        "200":
+          description: Orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+  /orders/{id}:
+    get:
+      operationId: getOrder
+      tags: [orders]
+      summary: Get an order with line items
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateOrder
+      tags: [orders]
+      summary: Change an order's status or customer details
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderUpdate"
+      responses:
+        "200":
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /bot/settings:
+    get:
+      operationId: getBotSettings
+      tags: [bot]
+      summary: Get bot and administrator settings
+      responses:
+        "200":
+          description: Bot settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BotSettings"
+    patch:
+      operationId: updateBotSettings
+      tags: [bot]
+      summary: Update bot and administrator settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BotSettingsUpdate"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BotSettings"
+  /bot/users:
+    put:
+      operationId: upsertBotUser
+      tags: [bot]
+      summary: Register a Telegram user sent by the bot adapter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BotUserInput"
+      responses:
+        "200":
+          description: Registered or updated Telegram user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+  /bot/orders:
+    post:
+      operationId: createBotOrder
+      tags: [bot]
+      summary: Create an order from the Telegram bot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BotOrderInput"
+      responses:
+        "201":
+          description: Created bot order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /bot/heartbeat:
+    post:
+      operationId: reportBotHeartbeat
+      tags: [bot]
+      summary: Record that a bot adapter is online
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BotHeartbeatInput"
+      responses:
+        "200":
+          description: Heartbeat accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BotHeartbeat"
+    get:
+      operationId: getBotHeartbeat
+      tags: [bot]
+      summary: Check when the bot last contacted the API
+      responses:
+        "200":
+          description: Bot runtime status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BotHeartbeat"
+components:
+  parameters:
+    Id:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+  responses:
+    BadRequest:
+      description: Invalid input or operation could not be completed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Record not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    UserStatus:
+      type: string
+      enum: [active, blocked]
+    ProductStatus:
+      type: string
+      enum: [active, hidden]
+    OrderStatus:
+      type: string
+      enum: [new, processing, shipped, completed, cancelled]
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        telegramId: { type: ["string", "null"] }
+        name: { type: string }
+        username: { type: ["string", "null"] }
+        balance: { type: number }
+        status: { $ref: "#/components/schemas/UserStatus" }
+        createdAt: { type: string, format: date-time }
+      required: [id, telegramId, name, username, balance, status, createdAt]
+    UserInput:
+      type: object
+      properties:
+        telegramId: { type: ["string", "null"] }
+        name: { type: string, minLength: 1 }
+        username: { type: ["string", "null"] }
+        balance: { type: number, minimum: 0 }
+      required: [name]
+    UserUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        username: { type: ["string", "null"] }
+        status: { $ref: "#/components/schemas/UserStatus" }
+    BalanceChange:
+      type: object
+      properties:
+        amount: { type: number, not: { const: 0 } }
+        note: { type: string, maxLength: 240 }
+      required: [amount, note]
+    BalanceTransaction:
+      type: object
+      properties:
+        id: { type: integer }
+        amount: { type: number }
+        note: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, amount, note, createdAt]
+    Product:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        description: { type: string }
+        category: { type: string }
+        price: { type: number }
+        currency: { type: string }
+        imageUrl: { type: ["string", "null"] }
+        stock: { type: integer }
+        status: { $ref: "#/components/schemas/ProductStatus" }
+        createdAt: { type: string, format: date-time }
+      required: [id, title, description, category, price, currency, imageUrl, stock, status, createdAt]
+    ProductInput:
+      type: object
+      properties:
+        title: { type: string, minLength: 1 }
+        description: { type: string }
+        category: { type: string, minLength: 1 }
+        price: { type: number, minimum: 0 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        imageUrl: { type: ["string", "null"], format: uri }
+        stock: { type: integer, minimum: 0 }
+        status: { $ref: "#/components/schemas/ProductStatus" }
+      required: [title, description, category, price, currency, stock, status]
+    ProductUpdate:
+      type: object
+      properties:
+        title: { type: string, minLength: 1 }
+        description: { type: string }
+        category: { type: string, minLength: 1 }
+        price: { type: number, minimum: 0 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        imageUrl: { type: ["string", "null"], format: uri }
+        stock: { type: integer, minimum: 0 }
+        status: { $ref: "#/components/schemas/ProductStatus" }
+    OrderLine:
+      type: object
+      properties:
+        id: { type: integer }
+        productId: { type: ["integer", "null"] }
+        title: { type: string }
+        quantity: { type: integer, minimum: 1 }
+        unitPrice: { type: number }
+      required: [id, productId, title, quantity, unitPrice]
+    Order:
+      type: object
+      properties:
+        id: { type: integer }
+        telegramId: { type: ["string", "null"] }
+        customerName: { type: string }
+        status: { $ref: "#/components/schemas/OrderStatus" }
+        total: { type: number }
+        currency: { type: string }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/OrderLine" }
+        createdAt: { type: string, format: date-time }
+      required: [id, telegramId, customerName, status, total, currency, lines, createdAt]
+    OrderUpdate:
+      type: object
+      properties:
+        status: { $ref: "#/components/schemas/OrderStatus" }
+        customerName: { type: string, minLength: 1 }
+    BotOrderLineInput:
+      type: object
+      properties:
+        productId: { type: integer, minimum: 1 }
+        quantity: { type: integer, minimum: 1, maximum: 99 }
+      required: [productId, quantity]
+    BotOrderInput:
+      type: object
+      properties:
+        telegramId: { type: string, minLength: 1 }
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 30
+          items: { $ref: "#/components/schemas/BotOrderLineInput" }
+      required: [telegramId, lines]
+    BotUserInput:
+      type: object
+      properties:
+        telegramId: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+        username: { type: ["string", "null"] }
+      required: [telegramId, name]
+    BotSettings:
+      type: object
+      properties:
+        botName: { type: string }
+        welcomeMessage: { type: string }
+        supportUsername: { type: string }
+        currency: { type: string }
+        adminName: { type: string }
+        adminContact: { type: string }
+        botEnabled: { type: boolean }
+        updatedAt: { type: string, format: date-time }
+      required: [botName, welcomeMessage, supportUsername, currency, adminName, adminContact, botEnabled, updatedAt]
+    BotSettingsUpdate:
+      type: object
+      properties:
+        botName: { type: string, minLength: 1 }
+        welcomeMessage: { type: string, maxLength: 2000 }
+        supportUsername: { type: string }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        adminName: { type: string }
+        adminContact: { type: string }
+        botEnabled: { type: boolean }
+    BotHeartbeatInput:
+      type: object
+      properties:
+        adapter: { type: string, minLength: 1 }
+      required: [adapter]
+    BotHeartbeat:
+      type: object
+      properties:
+        online: { type: boolean }
+        adapter: { type: ["string", "null"] }
+        lastSeenAt: { type: ["string", "null"], format: date-time }
+      required: [online, adapter, lastSeenAt]
+    Dashboard:
+      type: object
+      properties:
+        users: { type: integer }
+        activeUsers: { type: integer }
+        products: { type: integer }
+        activeProducts: { type: integer }
+        orders: { type: integer }
+        pendingOrders: { type: integer }
+        revenue: { type: number }
+        currency: { type: string }
+        orderCounts:
+          type: array
+          items: { $ref: "#/components/schemas/OrderStatusCount" }
+      required: [users, activeUsers, products, activeProducts, orders, pendingOrders, revenue, currency, orderCounts]
+    OrderStatusCount:
+      type: object
+      properties:
+        status: { $ref: "#/components/schemas/OrderStatus" }
+        count: { type: integer }
+      required: [status, count]
+    ActivityItem:
+      type: object
+      properties:
+        id: { type: string }
+        type: { type: string, enum: [user, product, order] }
+        title: { type: string }
+        detail: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, type, title, detail, createdAt]
+
